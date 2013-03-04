@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+
+	<style type="text/css">
+		body {
+			background-color: #F7F7F7;
+			font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+			padding: 50px 0 0;
+			margin: 0;
+		}
+		#main {
+			width: 800px;
+			margin: 0 auto;
+		}
+		#dssc {
+			display: none;
+		}
+		#dssc a {
+			padding: 3px 8px 5px;
+			text-decoration: none;
+			text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+			border-radius: 0 0 5px 5px;
+		}
+		#switcher {
+			float: left;
+		}
+		#switcher a {
+			background: #333;
+			color: #FFF;
+		}
+		#rates {
+			margin: 3px 0 0 0;
+			text-align: right;
+		}
+		#rates li {
+			display: inline;
+			list-style-type: none;
+			margin-left: 4px;
+		}
+		#rates li:first-child {
+			margin-left: 0;
+		}
+		#rates li a {
+			background: #3A87AD;
+			color: #EEE;
+		}
+		#rates li.playing a, #rates li.switching a {
+			color: #FFF;
+			font-weight: bold;
+		}
+		#rates li.playing a {
+			background: #B94A48;
+			cursor: default;
+		}
+		#rates li.switching a {
+			background: #C67605;
+		}
+		#srcForm {
+			margin-top: 20px;
+		}
+		#src {
+			width: 750px;
+		}
+	</style>
+
+	<script type="text/javascript" src="http://yandex.st/swfobject/2.2/swfobject.min.js"></script>
+	<script type="text/javascript">
+		// Google Analytics configuration
+		// http://code.google.com/p/reops/wiki/GTrackPlugin
+		var gTrackPluginConfig = '<value key="reTrackConfig" type="class" class="com.realeyes.osmf.plugins.tracking.google.config.RETrackConfig">\
+			<account>UA-30557469-1</account>\
+			<url>http://test.ru</url>\
+			<event name="percentWatched" category="video" action="percentWatched">\
+			<marker percent="0" label="start" />\
+			<marker percent="25" label="view" />\
+			<marker percent="50" label="view" />\
+			<marker percent="75" label="view" />\
+			</event>\
+			<event name="complete" category="video" action="complete" label="trackingTesting" value="1" />\
+			<event name="pageView" />\
+			<debug>true</debug>\
+			<updateInterval>250</updateInterval>\
+		</value>';
+
+		var flashvars = {
+			src: "M3U8 FILE URL HERE"
+			// , autoPlay: true
+			// , controlBarMode: "floating"
+			// , controlBarAutoHide: false
+
+			// Google Analytics settings
+			, plugin_ga: "GTrackPlugin.swf"
+			, "ga_http://www.realeyes.com/osmf/plugins/tracking/google": escape(gTrackPluginConfig)
+			// set for tracking custom page url
+			// , src_namespace_realeyes: "http://www.realeyes.com/osmf/plugins/tracking/google"
+			// , src_realeyes_pageURL: "my_page_url"
+
+			, javascriptCallbackFunction: "onJavaScriptBridgeCreated"
+		};
+		var params = {
+			wmode: "direct"
+			, allowFullScreen: true
+		};
+		var attrs = {
+			name: "player"
+		};
+
+		swfobject.embedSWF("StrobeMediaPlayback.swf", "player", "800", "488", "10.2", null, flashvars, params, attrs);
+
+		var player;
+		var srcInput;
+		function onJavaScriptBridgeCreated(playerId) {
+			if (!player) {
+				player = document.getElementById(playerId);
+				srcInput = document.getElementById("src");
+				srcInput.value = flashvars.src;
+				player.addEventListener("isDynamicStreamChange", "updateDynamicStreamItems");
+				player.addEventListener("switchingChange", "updateDynamicStreamItems");
+				player.addEventListener("autoSwitchChange", "updateDynamicStreamItems");
+				player.addEventListener("mediaSizeChange", "updateDynamicStreamItems");
+			}
+		}
+
+		function updateDynamicStreamItems() {
+			var ds = document.getElementById("dssc");
+			var dynamicStreams = player.getStreamItems();
+			ds.style.display = dynamicStreams == null ? "none" : "block";
+			var switchMode = player.getAutoDynamicStreamSwitch() ? "Auto" : "Manual";
+			var isSwitching = player.getDynamicStreamSwitching();
+
+			var dsItems = '<div id="switcher"><a href="#" onclick="player.setAutoDynamicStreamSwitch(!player.getAutoDynamicStreamSwitch()); return false;"> Switch Mode: ' + switchMode + '</a></div>';
+			var currentStreamIndex = player.getCurrentDynamicStreamIndex();
+
+			dsItems += '<ul id="rates">'
+			var item;
+			for (var idx = 0; idx < dynamicStreams.length; idx++) {
+				var style = "";
+				if (currentStreamIndex == idx) {
+					style = isSwitching ? "switching" : "playing";
+				}
+				item = dynamicStreams[idx];
+				dsItems += '<li class="' + style + '">'
+					+ '<a href="#" title="' + item.streamName + '"'
+					+ (currentStreamIndex != idx ? ' onclick="switchDynamicStreamIndex(' + idx + '); return false;"' : '')
+					+ '>'
+					+ Math.round(item.bitrate)
+					+ 'kbps'
+					+ (item.height > 0 ? ' <small>(' + item.height + 'p)</small>' : '')
+					+ '</a></li>';
+			}
+			dsItems += '</ul>'
+			ds.innerHTML = dsItems;
+		}
+		function switchDynamicStreamIndex(index) {
+			if (player.getAutoDynamicStreamSwitch()) {
+				player.setAutoDynamicStreamSwitch(false);
+			}
+			player.switchDynamicStreamIndex(index);
+		}
+
+		function changeSrc(src) {
+			player.setMediaResourceURL(srcInput.value);
+		}
+	</script>
+
+</head>
+<body>
+	<div id="main">
+		<div id="player">
+			<p><a href="http://www.adobe.com/go/getflashplayer"><img src="http://www.adobe.com/images/shared/download_buttons/get_flash_player.gif" alt="Get Adobe Flash player" /></a></p>
+		</div>
+		<div id="dssc">
+			The available qualities will be loaded once the playback starts...
+		</div>
+		<div id="srcForm">
+			<input id="src">
+			<button onclick="changeSrc()">GO</button>
+		</div>
+	</div>
+</body>
+</html>
